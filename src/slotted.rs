@@ -148,33 +148,3 @@ impl<B: ByteSliceMut> IndexMut<usize> for Slotted<B> {
         self.data_mut(self.pointers()[index])
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let mut page_data = vec![0u8; 128];
-        let mut slotted = Slotted::new(page_data.as_mut_slice());
-        let insert = |slotted: &mut Slotted<&mut [u8]>, index: usize, buf: &[u8]| {
-            slotted.insert(index, buf.len()).unwrap();
-            slotted[index].copy_from_slice(buf);
-        };
-        let push = |slotted: &mut Slotted<&mut [u8]>, buf: &[u8]| {
-            let index = slotted.num_slots() as usize;
-            insert(slotted, index, buf);
-        };
-        slotted.initialize();
-        push(&mut slotted, b"hello");
-        push(&mut slotted, b"world");
-        assert_eq!(&slotted[0], b"hello");
-        assert_eq!(&slotted[1], b"world");
-        insert(&mut slotted, 1, b", ");
-        push(&mut slotted, b"!");
-        assert_eq!(&slotted[0], b"hello");
-        assert_eq!(&slotted[1], b", ");
-        assert_eq!(&slotted[2], b"world");
-        assert_eq!(&slotted[3], b"!");
-    }
-}
