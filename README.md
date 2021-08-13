@@ -1,1 +1,1 @@
-# rustでRDBMSを実装
+# 作って学ぶ Rust で実装 RDBMS のしくみ
