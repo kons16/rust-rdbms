@@ -27,6 +27,7 @@ impl<'a> TupleSearchMode<'a> {
 }
 
 pub trait Executor {
+    // 構造体に直接実装するのではなく、Executorトレイトのメソッドとして実装
     fn next(&mut self, bufmgr: &mut BufferPoolManager) -> Result<Option<Tuple>>;
 }
 
@@ -131,22 +132,27 @@ impl<'a> PlanNode for IndexScan<'a> {
 }
 
 pub struct ExecIndexScan<'a> {
-    table_btree: BTree,
-    index_iter: btree::Iter,
+    table_btree: BTree,      // テーブルのB+Tree検索で使う用
+    index_iter: btree::Iter, // セカンダリインデックス用
     while_cond: &'a dyn Fn(TupleSlice) -> bool,
 }
 
 impl<'a> Executor for ExecIndexScan<'a> {
     fn next(&mut self, bufmgr: &mut BufferPoolManager) -> Result<Option<Tuple>> {
+        // セカンダリキーとプライマリキーを取り出す
         let (skey_bytes, pkey_bytes) = match self.index_iter.next(bufmgr)? {
             Some(pair) => pair,
             None => return Ok(None),
         };
         let mut skey = vec![];
         tuple::decode(&skey_bytes, &mut skey);
+
+        // クロージャーにセカンダリキーを渡す
         if !(self.while_cond)(&skey) {
             return Ok(None);
         }
+
+        // テーブルのB+Treeを検索
         let mut table_iter = self
             .table_btree
             .search(bufmgr, SearchMode::Key(pkey_bytes))?;
